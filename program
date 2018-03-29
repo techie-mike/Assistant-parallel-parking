@@ -1,0 +1,243 @@
+#define SPEED_1      11 
+#define DIR_1        13
+ 
+#define SPEED_2      3
+#define DIR_2        12
+ 
+  
+#include <Encoder.h>   
+#include <Servo.h>                
+Encoder myEnc(22,23 );
+Servo myservo;
+
+int aa = 26; //максимальный угол поворота колёс
+double k = 17.5; //колесная база
+double K = 10; //колесная колея
+
+int k1 = 5; // растояние от задней оси до задней точки автомобиля
+int k2 = 6; // растояние от передней оси до передней точки автомобиля
+int k3 = 1; // растояние от колеи до борта автомобиля
+
+double b,qq;
+double a1;
+double b1;
+double B;
+double h;
+double A;
+double N;
+double O;
+int r;
+double X1,X2,Y1,Y2;
+double R;
+double p;
+double x1;
+double dx;
+double dx1;
+double dx2;
+double dx3;
+double first,raz,raz1;
+double m;
+double w;
+double x;
+int E;
+double l,L1,L2;
+double a;
+int URPWM=19; 
+int URTRIG=20;
+double lastPos;
+double T1;
+double T2;
+int pos=88;
+double pos1;
+unsigned long tim;                               
+unsigned long urmTimer = 0;                      
+unsigned int Distance=0, Distance1;
+uint8_t EnPwmCmd[4]={0x44,0x22,0xbb,0x01};       
+
+void setup(){      
+  // Serial initialization
+  Serial.begin(9600);                            
+  PWM_Mode_Setup();
+
+  pinMode(44,OUTPUT);                            
+  digitalWrite(44,HIGH);                         
+  pinMode(45, INPUT);     
+  
+ 
+ myservo.attach(5); 
+ myservo.write(pos);
+ PWM_Mode();
+ first = Distance;
+ dx = 0;
+ a = 0;
+ b = 0;
+ R = k/tan(aa*3.14/180.0);
+ // L1 = 60*2*(3.14)*R / 360;
+ // L2=L1;
+ L1= R*(acos((2*R - first - raz1/2)/(2*R))/2*3.14);
+ L2=L1;
+ raz = k +k1+k2;
+ raz1 = K + 2*k3;
+ qq = sin(acos((2*R - first - raz1/2)/(2*R))) * (R + raz1/2);
+ pinMode(11, OUTPUT);  
+ pinMode(13, OUTPUT);
+}
+
+void loop() {    //начало основной программы
+  while (b == 0) { //поиск парковочного места
+    
+  analogWrite(11, 70); //задаём скорость двигателя
+  digitalWrite(13, LOW); //задаём направление вращения вала
+  
+   long newPosition = myEnc.read() * (-1);//    
+    if(millis()-urmTimer>50) {   //ограничиваем количесво измерений расстояния до стенки.
+      urmTimer=millis();         //(каждое измерение 1 раз в 0,05 сек)
+      PWM_Mode();                //измеряем расстояние до стенки.
+      r = r+1;
+    /*  if (r == 1){
+        first = Distance;        //принисаем первое значение расстояния до стенки за начальное.
+        Serial.println(first);
+      } */
+      dx = Distance - first;        //разница расстояний до стены межди текущими
+                                    // и начальными измерениями.
+      if ((r>1) && (dx>(raz1)) && (a == 0)) { //нахождение начала парковочного места
+         a = lastPos / 41.6;        
+         Serial.println(a);
+      }
+     p = (newPosition/41.6) - a;
+     Serial.println(p);
+     
+      if ((dx<raz1) && (a>0) && ((p< qq)|| (p<raz)))  a=0;
+      if ((dx<raz1) && (a>0) && (p> qq)&& (p>=raz))  { //нахождение конца парковочного места
+         b = newPosition /41.6; 
+         Serial.println(b);
+         
+         Y1 = first +1 + raz/2;
+        // X1 = (b-a)-14;
+        X1 = a +2;                 //выставление растояния до стенки 
+         Y2 = Y1;
+        // X2 = (b-a)+14;
+         X2 = a + raz;
+         a1 = Distance;
+         b1 = Distance; 
+      //   Serial.print (X1);
+      //   Serial.println(Y1);
+      //   Serial.print (X2); 
+      //   Serial.println(Y2);
+         //delay(1200);//проезжаем вперед после нахождения парковочного места
+  analogWrite(11, 0); //остановка
+//  m = cos(30*3.14/180)*2*R - b+ X1;
+m = sin(acos((2*R - first - raz1/2)/(2*R))) * R * 2 - b + X1+2;
+//  L1 = 60*2*(3.14)*R / 360;
+//  L2=L1;
+  analogWrite(11, 70);
+  while (dx2<m){
+    long newPos = myEnc.read() * (-1); 
+    dx2 =(newPos/41.6) - b;
+    int rr = m-dx2;
+    if (rr <=6) analogWrite(11, 60);
+    if (rr <=3) analogWrite(11, 40);
+ // digitalWrite(13, HIGH);
+  }
+  analogWrite(11, 0);
+  delay(200);
+ /*     w = myEnc.read();
+      w = (w /45.8) ;
+      PWM_Mode();
+     R= first;  
+     w = sqrt(w*w +(b1-first)*(b1-first)); */
+    }
+     //     if ((r>1) && (dx<=raz1)) { //нахождение начала парковочного места
+     //    a = lastPos / 41.6;        
+     //    Serial.println(a);
+     // }
+
+    T1 = Distance; //предыдущему значению присваиваем новое значения расстояния до стенки
+    lastPos = newPosition;  
+   }
+}
+if (b>0 && E==0) {
+ // p =(a1/41.6) - b - m;
+  pos = pos-aa;
+ myservo.write(pos);
+ delay(800);
+ a1 = (-1)* myEnc.read()/41.6;
+ Serial.println(a1);
+ Serial.println(L1);
+ digitalWrite(13, HIGH); 
+ dx2=0;
+   while (dx2<=L1){
+    long newPos = (-1)* myEnc.read(); 
+    dx2 =a1 -  (newPos/41.6);
+    analogWrite(11, 70); 
+     int rr = m-dx2;
+    if (rr <=3) analogWrite(11, 65);
+    if (rr <=1) analogWrite(11, 60);
+   }
+analogWrite(11, 0); 
+delay(200);
+ pos =pos+2*aa;
+ myservo.write(pos); 
+ delay(800);
+ a1 = (-1)* myEnc.read()/41.6;
+ dx2=0;
+ analogWrite(11, 70); 
+ PWM_ModeZAD();
+    while ((dx2<=L2)&&(Distance1>=6)){
+    long newPos = (-1)* myEnc.read(); 
+    PWM_ModeZAD();
+    dx2 =a1 -  (newPos/41.6);
+    if (Distance1<=10)  analogWrite(11, 60);
+    if (Distance1<=8)  analogWrite(11, 45); 
+    
+   }   
+   analogWrite(11, 0); 
+   delay(200);
+ pos = pos-aa;
+ myservo.write(pos); 
+ delay(800);
+  dx2=0;
+  int razzz = raz/4;
+  int ee = (-1)* myEnc.read();
+   digitalWrite(13, LOW); 
+ while (dx2<=razzz){
+   
+    dx2 = ((-1)* myEnc.read()- ee) / 41.6;
+    analogWrite(11, 70); 
+   }   
+   analogWrite(11, 0);
+//   myservo.write (
+ // analogWrite(11, 85);
+ // digitalWrite(13, HIGH);
+ E=1;
+  }
+ 
+   
+
+}
+ void PWM_Mode_Setup(){ 
+  pinMode(URTRIG,OUTPUT);                        
+  digitalWrite(URTRIG,HIGH);                        
+  pinMode(URPWM, INPUT);                             
+}
+
+void PWM_Mode(){                                    
+    digitalWrite(URTRIG, LOW); 
+    digitalWrite(URTRIG, HIGH);                      
+   
+       unsigned long DistanceMeasured=pulseIn(URPWM,LOW);
+      Distance=DistanceMeasured/50 ;                        
+}
+ void PWM_Mode_Setup1(){ 
+  pinMode(44,OUTPUT);                        
+  digitalWrite(44,HIGH);                        
+  pinMode(45, INPUT);                             
+}
+
+void PWM_ModeZAD(){                                    
+    digitalWrite(44, LOW); 
+    digitalWrite(44, HIGH);                      
+   
+       unsigned long DistanceMeasured=pulseIn(45,LOW);
+      Distance1=(DistanceMeasured/50);                        
+}
