@@ -1,2 +1,2 @@
-# Assistant-parallel-parking
+Помощник параллельной парковки
 Project for Sirius. Kaskov Misha.
